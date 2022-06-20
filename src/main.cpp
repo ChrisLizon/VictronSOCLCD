@@ -27,7 +27,7 @@ const char* keepalivepayload =  "[\"battery/+/Soc\", \"solarcharger/+/Yield/Powe
 
 
 
-int relayPin = 16;
+int relay2Pin = 16;
 
 WiFiClientSecure wifiClient;
 PubSubClient mqttClient;
@@ -152,27 +152,13 @@ void callback(char* topic, byte* payload, unsigned int length) {
     z = s.toInt();
 
     lastRelay2state = z;
+    digitalWrite(relay2Pin, z);
     
     
   }
 
   
-  if(lastACState == 1){
-    //Serial.println("Generator Online, Water heater ON.");
-    digitalWrite(relayPin, HIGH);
-  } else if (lastSOC >= 95){
-    //Serial.print("Battery SOC = ");
-    //Serial.print(lastSOC);
-    //Serial.println(". Water heater ON.");
-    
-    digitalWrite(relayPin, HIGH);
-  }
-  else{
-    //Serial.print("No AC and battery SOC = ");
-    //Serial.print(lastSOC);
-    //Serial.println(". Water heater OFF.");
-    digitalWrite(relayPin, LOW);
-  }
+  
 
   printout();
   
@@ -203,8 +189,8 @@ void setup() {
   mqttClient.setServer(MQTT_SERVER, MQTT_PORT);
   mqttClient.setCallback(callback);
 
-  pinMode(relayPin, OUTPUT);
-  digitalWrite(relayPin, LOW);
+  pinMode(relay2Pin, OUTPUT);
+  digitalWrite(relay2Pin, LOW);
 }
 
 void reconnect() {
