@@ -4,6 +4,7 @@
 #include <WiFiClientSecure.h>
 #include <ArduinoJson.h>
 #include <credentials.h>
+#include <LiquidCrystal_I2C.h>
 
 
 
@@ -42,8 +43,31 @@ int lastRelay2state = 0;
 
 const char *inverterMode[]= { "Off", "Low Power", "Fault", "Bulk", "Absorption","Float","Storage", "Equalize","Passthru","Inverting","Assisting","Power Supply" }; 
 
+LiquidCrystal_I2C lcd = LiquidCrystal_I2C(0x27, 20, 4);
+
 void printout(){
   
+  lcd.clear();
+  lcd.setCursor(0,0);
+  lcd.print("SOLAR MONITOR:");
+  lcd.setCursor(0,1);
+  lcd.print("PV IN  AC IN  AC OUT");
+  lcd.setCursor(0,2);
+  lcd.print(lastSolarYield);
+  lcd.print("W");
+  lcd.setCursor(8,2);
+  lcd.print(lastACIn);
+  lcd.print("W");
+  lcd.setCursor(14,2);  
+  lcd.print(lastACOut);
+  lcd.print("W"); 
+  lcd.setCursor(0,3);
+  lcd.print(lastInverterMode);
+  lcd.setCursor(11,3);
+  lcd.print("SOC: ");
+  lcd.print(lastSOC);
+  lcd.print("%");
+
   Serial.print("SOC: ");
   Serial.print(lastSOC);
   Serial.println("%");
@@ -181,6 +205,10 @@ void callback(char* topic, byte* payload, unsigned int length) {
 
 
 void setup() {
+
+  lcd.init();
+  lcd.backlight();
+
   delay(3000);
   // put your setup code here, to run once:
   Serial.begin(115200);
