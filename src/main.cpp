@@ -7,25 +7,38 @@
 
 
 
-const char* SOC_topic = "N/d41243cd374d/battery/279/Soc";
-const char* SOC_request = "R/d41243cd374d/battery/279/Soc";
+const char* SOC_topic = "%c/%sbattery/%s/Soc";
 
+const char* AC_state_topic = "%c/%s/vebus/%s/Ac/ActiveIn/Connected";
+const char* AC_mode_topic = "%c/%s/vebus/%s/State";
+const char* AC_out_topic = "%c/%s/vebus/%s/Ac/Out/L1/P";
+const char* AC_in_topic = "%c/%s/vebus/%s/Ac/ActiveIn/L1/P";
+const char* AC_in_request = "%c/%s/vebus/%s/Ac/ActiveIn/L1/P";
 
-const char* AC_state_topic = "N/d41243cd374d/vebus/276/Ac/ActiveIn/Connected";
-const char* AC_mode_topic = "N/d41243cd374d/vebus/276/State";
-const char* AC_out_topic = "N/d41243cd374d/vebus/276/Ac/Out/L1/P";
-const char* AC_in_topic = "N/d41243cd374d/vebus/276/Ac/ActiveIn/L1/P";
-const char* AC_in_request = "R/d41243cd374d/vebus/276/Ac/ActiveIn/L1/P";
+const char* Relay2_topic = "%c/%s/system/0/Relay/1/State";
 
-const char* Relay2_topic = "N/d41243cd374d/system/0/Relay/1/State";
+const char* PV_topic = "%c/%s/solarcharger/0/Yield/Power";
 
-const char* PV_topic = "N/d41243cd374d/solarcharger/0/Yield/Power";
-const char* PV_request = "R/d41243cd374d/solarcharger/0/Yield/Power";
-
-const char* keepalivetopic = "R/d41243cd374d/keepalive";
+const char* keepalivetopic = "%c/%s/keepalive";
 const char* keepalivepayload =  "[\"battery/+/Soc\", \"solarcharger/+/Yield/Power\", \"vebus/+/Ac/ActiveIn/Connected\", \"vebus/276/Ac/ActiveIn/L1/P\", \"vebus/+/Ac/Out/L1/P\", \"vebus/+/State\", \"system/0/Relay/1/State\"]" ;
 
+char* getBatteryTopic(const char* topicstr, char mode){
+  char* buffer = new char[30];
+  snprintf(buffer, 30, topicstr, mode, INSTALLATION_ID, BATTERY_ID);
+  return buffer;
+}
 
+char* getMultiplusTopic(const char* topicstr, char mode){
+  char* buffer = new char[50];
+  snprintf(buffer, 50, topicstr, mode, INSTALLATION_ID, MULTIPLUS_ID);
+  return buffer;
+}
+
+char* getTopic(const char* topicstr, char mode){
+  char* buffer = new char[50];
+  snprintf(buffer, 50, topicstr, mode, INSTALLATION_ID);
+  return buffer;
+}
 
 int relay2Pin = 16;
 
@@ -164,8 +177,8 @@ void callback(char* topic, byte* payload, unsigned int length) {
 
 
 void setup() {
-  delay(3000);
-  // put your setup code here, to run once:
+  delay(3000); //only here so I can switch to my serial console in time
+
   Serial.begin(115200);
 
   WiFi.mode(WIFI_STA);
@@ -186,6 +199,7 @@ void setup() {
   mqttClient.setServer(MQTT_SERVER, MQTT_PORT);
   mqttClient.setCallback(callback);
 
+  //Setup GPIO for local relay/LED
   pinMode(relay2Pin, OUTPUT);
   digitalWrite(relay2Pin, LOW);
 }
@@ -199,18 +213,19 @@ void reconnect() {
     if (mqttClient.connect(CLIENT_ID, VRM_USERNAME, VRM_PASSWORD)) {
       Serial.print("Connected to ");
       Serial.println(MQTT_SERVER);
-      //subscribe to battery SOC
-      mqttClient.subscribe(SOC_topic);
-      mqttClient.subscribe(AC_state_topic);
-      mqttClient.subscribe(AC_out_topic);
-      mqttClient.subscribe(AC_mode_topic);
-      mqttClient.subscribe(AC_in_topic);
-      mqttClient.subscribe(PV_topic);
-      mqttClient.subscribe(Relay2_topic);
+      //subscribe to our MQTT topics
+      mqttClient.subscribe(getBatteryTopic(SOC_topic, 'N'));
+      mqttClient.subscribe(getMultiplusTopic(AC_state_topic, 'N'));
+      mqttClient.subscribe(getMultiplusTopic(AC_out_topic, 'N'));
+      mqttClient.subscribe(getMultiplusTopic(AC_mode_topic, 'N'));
+      mqttClient.subscribe(getMultiplusTopic(AC_in_topic, 'N'));
+      mqttClient.subscribe(getTopic(PV_topic,'N'));
+      mqttClient.subscribe(getTopic(Relay2_topic, 'N'));
       
-      //publish request for S
-      mqttClient.publish(SOC_request, "", true);
-      
+      //publish request for SOC
+      mqttClient.publish(getBatteryTopic(SOC_topic, 'R'), "", true);
+      //publish our KeepAlive
+      mqttClient.publish(getTopic(keepalivetopic,'R'), keepalivepayload, true);
     } else {
       Serial.print("failed, rc=");
       Serial.print(mqttClient.state());
@@ -221,7 +236,7 @@ void reconnect() {
   }
 }
 
-int i = 600;
+int i = 0;
 
 void loop() {
   // put your main code here, to run repeatedly:
@@ -229,11 +244,11 @@ void loop() {
      reconnect();
   }
 
-  if (i>60){
+  if (i>120){
     Serial.println("\nRequesting SOC refresh");
-    mqttClient.publish(SOC_request, "", true);
+    mqttClient.publish(getBatteryTopic(SOC_topic, 'R'), "", true);
 
-    mqttClient.publish(keepalivetopic, keepalivepayload, true);
+    mqttClient.publish(getTopic(keepalivetopic,'R'), keepalivepayload, true);
     i=0;
   }
 
