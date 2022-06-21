@@ -95,7 +95,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
   String t = String(topic);
 
   if(t.indexOf(String("Soc")) > 0){
-    Serial.println("Processing SOC measurement.");
+    //Serial.println("Processing SOC measurement.");
     int z = 0;
 
     String s = doc["value"];
@@ -106,7 +106,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
     }
 
   }else if(t.indexOf(String("Connected")) > 0){
-    Serial.println("Processing AC Input.");
+    //Serial.println("Processing AC Input.");
     int z = 0;
 
     String s = doc["value"];
@@ -133,18 +133,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
     lastACOut = z;
     
     
-  }
-  else if(t.indexOf(String("276/State")) > 0){
-    
-    int z = 0;
-
-    String s = doc["value"];
-    z = s.toInt();
-
-    lastInverterMode = z;
-    
-    
-  }else if(t.indexOf(String("1Relay/1/State")) > 0){
+  }  else if(t.indexOf(String("Relay/1/State")) > 0){
     
     int z = 0;
 
@@ -155,6 +144,14 @@ void callback(char* topic, byte* payload, unsigned int length) {
     digitalWrite(relay2Pin, z);
     
     
+  }else if(t.indexOf(String("/vebus/")) > 0 && t.endsWith(String("/State"))){
+    
+    int z = 0;
+
+    String s = doc["value"];
+    z = s.toInt();
+
+    lastInverterMode = z;
   }
 
   
@@ -209,6 +206,7 @@ void reconnect() {
       mqttClient.subscribe(AC_mode_topic);
       mqttClient.subscribe(AC_in_topic);
       mqttClient.subscribe(PV_topic);
+      mqttClient.subscribe(Relay2_topic);
       
       //publish request for S
       mqttClient.publish(SOC_request, "", true);
