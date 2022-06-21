@@ -6,46 +6,57 @@
 #include <credentials.h>
 
 
-
+//Battery SOC
 const char* SOC_topic = "%c/%sbattery/%s/Soc";
 
+//Values coming from the Multiplus
 const char* AC_state_topic = "%c/%s/vebus/%s/Ac/ActiveIn/Connected";
 const char* AC_mode_topic = "%c/%s/vebus/%s/State";
 const char* AC_out_topic = "%c/%s/vebus/%s/Ac/Out/L1/P";
 const char* AC_in_topic = "%c/%s/vebus/%s/Ac/ActiveIn/L1/P";
 const char* AC_in_request = "%c/%s/vebus/%s/Ac/ActiveIn/L1/P";
 
-const char* Relay2_topic = "%c/%s/system/0/Relay/1/State";
-
+//PV Values, assumes one MPPT device
 const char* PV_topic = "%c/%s/solarcharger/0/Yield/Power";
+
+//system settings, 
+const char* Relay2_topic = "%c/%s/system/0/Relay/1/State";
 
 const char* keepalivetopic = "%c/%s/keepalive";
 const char* keepalivepayload =  "[\"battery/+/Soc\", \"solarcharger/+/Yield/Power\", \"vebus/+/Ac/ActiveIn/Connected\", \"vebus/276/Ac/ActiveIn/L1/P\", \"vebus/+/Ac/Out/L1/P\", \"vebus/+/State\", \"system/0/Relay/1/State\"]" ;
 
+//get the battery topic with subscribe (N) vs publish (R) path
+// BATTERY_ID would be the device identifyer for your Shunt. 
 char* getBatteryTopic(const char* topicstr, char mode){
   char* buffer = new char[30];
   snprintf(buffer, 30, topicstr, mode, INSTALLATION_ID, BATTERY_ID);
   return buffer;
 }
 
+//get the multiplus topics with subscribe (N) vs publish (R) path
+// MULTIPLUS_ID would be the device identifyer for your multiplus. 
 char* getMultiplusTopic(const char* topicstr, char mode){
   char* buffer = new char[50];
   snprintf(buffer, 50, topicstr, mode, INSTALLATION_ID, MULTIPLUS_ID);
   return buffer;
 }
 
+//get the multiplus topics with subscribe (N) vs publish (R) path
+//these paths are relative to the GX device and don't have unique IDS included. 
 char* getTopic(const char* topicstr, char mode){
   char* buffer = new char[50];
   snprintf(buffer, 50, topicstr, mode, INSTALLATION_ID);
   return buffer;
 }
 
+//drive an external relay.
 int relay2Pin = 16;
 
 WiFiClientSecure wifiClient;
 PubSubClient mqttClient;
 
-int lastSOC = 51;
+//state information
+int lastSOC = 0;
 int lastACState = 0;
 int lastACIn = 0;
 int lastSolarYield = 0;
@@ -53,8 +64,10 @@ int lastACOut = 0;
 int lastInverterMode = 0;
 int lastRelay2state = 0;
 
+//inverter mode array. 
 const char *inverterMode[]= { "Off", "Low Power", "Fault", "Bulk", "Absorption","Float","Storage", "Equalize","Passthru","Inverting","Assisting","Power Supply" }; 
 
+//print the current state information to the serial console
 void printout(){
   
   Serial.print("SOC: ");
@@ -77,6 +90,7 @@ void printout(){
   Serial.println(lastRelay2state == 1 ? "Yes" : "No");
 }
 
+//this function fires when a MQTT message is received. 
 void callback(char* topic, byte* payload, unsigned int length) {
 
   Serial.print("\nMessage arrived [");
@@ -97,6 +111,9 @@ void callback(char* topic, byte* payload, unsigned int length) {
 
   DeserializationError error = deserializeJson(doc, value);
   
+  //all of the Victron MQTT subjects have a JSON object. If we can't
+  //deserialize it we will just escape the fucntion. This happens
+  //when subscribed to a topic that isn't currently set to keepalive
   if (error)
   {
     Serial.print("parseObject(");
@@ -108,15 +125,12 @@ void callback(char* topic, byte* payload, unsigned int length) {
   String t = String(topic);
 
   if(t.indexOf(String("Soc")) > 0){
-    //Serial.println("Processing SOC measurement.");
     int z = 0;
 
     String s = doc["value"];
     z = s.toInt();
 
-    if( z != 0 && lastSOC > 50){
-      lastSOC = z;
-    }
+    lastSOC = z;
 
   }else if(t.indexOf(String("Connected")) > 0){
     //Serial.println("Processing AC Input.");
@@ -136,7 +150,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
     lastSolarYield = z;
     
     
-  }  else if(t.indexOf(String("Out/L1/P")) > 0){
+  }else if(t.indexOf(String("Out/L1/P")) > 0){
     
     int z = 0;
 
@@ -146,7 +160,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
     lastACOut = z;
     
     
-  }  else if(t.indexOf(String("Relay/1/State")) > 0){
+  }else if(t.indexOf(String("Relay/1/State")) > 0){
     
     int z = 0;
 
@@ -167,9 +181,8 @@ void callback(char* topic, byte* payload, unsigned int length) {
     lastInverterMode = z;
   }
 
-  
-  
 
+  //refresh the serial console now that we've recieved a new value
   printout();
   
   
@@ -177,7 +190,8 @@ void callback(char* topic, byte* payload, unsigned int length) {
 
 
 void setup() {
-  delay(3000); //only here so I can switch to my serial console in time
+  //only here so I can switch to my serial console to debug in time
+  delay(5000); 
 
   Serial.begin(115200);
 
@@ -198,6 +212,7 @@ void setup() {
   mqttClient.setClient(wifiClient);
   mqttClient.setServer(MQTT_SERVER, MQTT_PORT);
   mqttClient.setCallback(callback);
+  
 
   //Setup GPIO for local relay/LED
   pinMode(relay2Pin, OUTPUT);
@@ -244,6 +259,7 @@ void loop() {
      reconnect();
   }
 
+  //every so many loops we will request a new update from the MQTT brokers
   if (i>120){
     Serial.println("\nRequesting SOC refresh");
     mqttClient.publish(getBatteryTopic(SOC_topic, 'R'), "", true);
@@ -253,7 +269,7 @@ void loop() {
   }
 
   i++;
-  //Serial.print(".");
+  
   mqttClient.loop();
   delay(1000);
   yield();
