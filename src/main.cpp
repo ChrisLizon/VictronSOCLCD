@@ -7,7 +7,7 @@
 
 
 //Battery SOC
-const char* SOC_topic = "%c/%sbattery/%s/Soc";
+const char* SOC_topic = "%c/%s/battery/%s/Soc";
 
 //Values coming from the Multiplus
 const char* AC_state_topic = "%c/%s/vebus/%s/Ac/ActiveIn/Connected";
@@ -28,8 +28,8 @@ const char* keepalivepayload =  "[\"battery/+/Soc\", \"solarcharger/+/Yield/Powe
 //get the battery topic with subscribe (N) vs publish (R) path
 // BATTERY_ID would be the device identifyer for your Shunt. 
 char* getBatteryTopic(const char* topicstr, char mode){
-  char* buffer = new char[30];
-  snprintf(buffer, 30, topicstr, mode, INSTALLATION_ID, BATTERY_ID);
+  char* buffer = new char[35];
+  snprintf(buffer, 35, topicstr, mode, INSTALLATION_ID, BATTERY_ID);
   return buffer;
 }
 
@@ -237,10 +237,7 @@ void reconnect() {
       mqttClient.subscribe(getTopic(PV_topic,'N'));
       mqttClient.subscribe(getTopic(Relay2_topic, 'N'));
       
-      //publish request for SOC
-      mqttClient.publish(getBatteryTopic(SOC_topic, 'R'), "", true);
-      //publish our KeepAlive
-      mqttClient.publish(getTopic(keepalivetopic,'R'), keepalivepayload, true);
+
     } else {
       Serial.print("failed, rc=");
       Serial.print(mqttClient.state());
@@ -251,7 +248,7 @@ void reconnect() {
   }
 }
 
-int i = 0;
+int i = 600;
 
 void loop() {
   // put your main code here, to run repeatedly:
@@ -260,10 +257,9 @@ void loop() {
   }
 
   //every so many loops we will request a new update from the MQTT brokers
-  if (i>120){
+  if (i>60){
     Serial.println("\nRequesting SOC refresh");
     mqttClient.publish(getBatteryTopic(SOC_topic, 'R'), "", true);
-
     mqttClient.publish(getTopic(keepalivetopic,'R'), keepalivepayload, true);
     i=0;
   }
