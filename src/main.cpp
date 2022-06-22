@@ -76,8 +76,8 @@ const char *inverterMode[]= { "Off", "Low Power", "Fault", "Bulk", "Absorption",
 
 LiquidCrystal_I2C lcd = LiquidCrystal_I2C(0x27, 20, 4);
 
-//print the current state information to the serial console
 
+//upadte what's on the LCD
 void refreshLCD(){
   lcd.setCursor(0,0);
   lcd.print("SOLAR MONITOR:");
@@ -95,7 +95,7 @@ void refreshLCD(){
   lcd.print("SOC: ");
   lcd.printf("%3d%%", lastSOC);
 }
-
+//print the current state information to the serial console
 void printout(){
   
   Serial.print("SOC: ");
