@@ -77,29 +77,27 @@ const char *inverterMode[]= { "Off", "Low Power", "Fault", "Bulk", "Absorption",
 LiquidCrystal_I2C lcd = LiquidCrystal_I2C(0x27, 20, 4);
 
 //print the current state information to the serial console
-void printout(){
-  
-  lcd.clear();
+
+void refreshLCD(){
   lcd.setCursor(0,0);
   lcd.print("SOLAR MONITOR:");
   lcd.setCursor(0,1);
   lcd.print("PV IN  AC IN  AC OUT");
   lcd.setCursor(0,2);
-  lcd.print(lastSolarYield);
-  lcd.print("W");
-  lcd.setCursor(8,2);
-  lcd.print(lastACIn);
-  lcd.print("W");
-  lcd.setCursor(14,2);  
-  lcd.print(lastACOut);
-  lcd.print("W"); 
+  lcd.printf("%4dW", lastSolarYield);
+  lcd.setCursor(7,2);
+  lcd.printf("%4dW", lastACIn);
+  lcd.setCursor(15,2);  
+  lcd.printf("%4dW", lastACOut);
   lcd.setCursor(0,3);
-  lcd.print(lastInverterMode);
+  lcd.print(inverterMode[lastInverterMode]);
   lcd.setCursor(11,3);
   lcd.print("SOC: ");
-  lcd.print(lastSOC);
-  lcd.print("%");
+  lcd.printf("%3d%%", lastSOC);
+}
 
+void printout(){
+  
   Serial.print("SOC: ");
   Serial.print(lastSOC);
   Serial.println("%");
@@ -176,9 +174,8 @@ void callback(char* topic, byte* payload, unsigned int length) {
 
     String s = doc["value"];
     z = s.toInt();
-
-    lastSolarYield = z;
     
+    lastSolarYield = z;
     
   }else if(t.indexOf(String("Out/L1/P")) > 0){
     
@@ -214,8 +211,8 @@ void callback(char* topic, byte* payload, unsigned int length) {
 
   //refresh the serial console now that we've recieved a new value
   printout();
-  
-  
+  //refresh the LCD display
+  refreshLCD();
 }
 
 
@@ -225,6 +222,8 @@ void setup() {
 
   lcd.init();
   lcd.backlight();
+  lcd.clear();
+  refreshLCD();
 
   //only here so I can switch to my serial console to debug in time
   delay(5000); 
@@ -284,7 +283,7 @@ void reconnect() {
   }
 }
 
-int i = 600;
+int i = 6000;
 
 void loop() {
   // put your main code here, to run repeatedly:
@@ -293,7 +292,7 @@ void loop() {
   }
 
   //every so many loops we will request a new update from the MQTT brokers
-  if (i>60){
+  if (i>600){
     Serial.println("\nRequesting SOC refresh");
     mqttClient.publish(getBatteryTopic(SOC_topic, 'R'), "", true);
     mqttClient.publish(getTopic(keepalivetopic,'R'), keepalivepayload, true);
@@ -303,7 +302,7 @@ void loop() {
   i++;
   
   mqttClient.loop();
-  delay(1000);
+  delay(100);
   yield();
   
 }
