@@ -9,8 +9,6 @@
 
 
 
-#define I2C_SDA 33  
-#define I2C_SCL 35
 
 
 const char* SOC_topic = "N/d41243cd374d/battery/279/Soc";
