@@ -5,7 +5,12 @@
 #include <ArduinoJson.h>
 #include <credentials.h>
 #include <LiquidCrystal_I2C.h>
+#include <Wire.h>
 
+
+
+#define I2C_SDA 33  
+#define I2C_SCL 35
 
 
 const char* SOC_topic = "N/d41243cd374d/battery/279/Soc";
@@ -42,6 +47,9 @@ int lastInverterMode = 0;
 int lastRelay2state = 0;
 
 const char *inverterMode[]= { "Off", "Low Power", "Fault", "Bulk", "Absorption","Float","Storage", "Equalize","Passthru","Inverting","Assisting","Power Supply" }; 
+
+
+
 
 LiquidCrystal_I2C lcd = LiquidCrystal_I2C(0x27, 20, 4);
 
@@ -205,6 +213,8 @@ void callback(char* topic, byte* payload, unsigned int length) {
 
 
 void setup() {
+
+  Wire.begin(I2C_SDA, I2C_SCL);
 
   lcd.init();
   lcd.backlight();
