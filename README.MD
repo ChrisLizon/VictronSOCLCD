@@ -1,3 +1,5 @@
+![LCD mounted in Project box](images/projectbox.jpg?raw=true "LCD mounted in project box")
+
 Background
 ----------
 
