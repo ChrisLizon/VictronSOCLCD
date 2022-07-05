@@ -27,7 +27,7 @@ const char* PV_topic = "%c/%s/solarcharger/0/Yield/Power";
 const char* Relay2_topic = "%c/%s/system/0/Relay/1/State";
 
 const char* keepalivetopic = "%c/%s/keepalive";
-const char* keepalivepayload =  "[\"battery/+/Soc\", \"solarcharger/+/Yield/Power\", \"vebus/+/Ac/ActiveIn/Connected\", \"vebus/276/Ac/ActiveIn/L1/P\", \"vebus/+/Ac/Out/L1/P\", \"vebus/+/State\", \"system/0/Relay/1/State\"]" ;
+const char* keepalivepayload =  "[\"battery/+/Soc\", \"solarcharger/+/Yield/Power\", \"vebus/+/Ac/ActiveIn/Connected\", \"vebus/+/Ac/ActiveIn/L1/P\", \"vebus/+/Ac/Out/L1/P\", \"vebus/+/State\", \"system/0/Relay/1/State\"]" ;
 
 //get the battery topic with subscribe (N) vs publish (R) path
 // BATTERY_ID would be the device identifyer for your Shunt. 
@@ -197,7 +197,14 @@ void callback(char* topic, byte* payload, unsigned int length) {
     z = s.toInt();
 
     lastACOut = z;
+  }else if(t.indexOf(String("In/L1/P")) > 0){
     
+    int z = 0;
+
+    String s = doc["value"];
+    z = s.toInt();
+
+    lastACIn = z;  
     
   }else if(t.indexOf(String("Relay/1/State")) > 0){
     
@@ -227,23 +234,15 @@ void callback(char* topic, byte* payload, unsigned int length) {
   refreshLCD();
 }
 
+void setupWifi(){
 
-void setup() {
-
-  Wire.begin(I2C_SDA, I2C_SCL);
-
-  lcd.init();
-  lcd.backlight();
   lcd.clear();
-  refreshLCD();
-
-  //only here so I can switch to my serial console to debug in time
-  delay(5000); 
-
-  Serial.begin(115200);
-
+  lcd.print("Waiting for WiFi...");
   WiFi.mode(WIFI_STA);
   WiFi.begin(WIFI_SSID, WIFI_PW);
+
+  lcd.clear();
+    lcd.print("Waiting for WiFi...");
 
   while (WiFi.status() != WL_CONNECTED) {
     Serial.print(".");
@@ -252,6 +251,22 @@ void setup() {
   Serial.println();
   Serial.println(WiFi.localIP());
   Serial.println();
+}
+
+
+void setup() {
+
+  Wire.begin(I2C_SDA, I2C_SCL);
+
+  lcd.init();
+  lcd.backlight();
+
+  //only here so I can switch to my serial console to debug in time
+  delay(5000); 
+
+  Serial.begin(115200);
+
+  setupWifi();
   
   // this is probably bad, but we need to connect to SSL with weird certs.
   wifiClient.setInsecure();
@@ -267,7 +282,10 @@ void setup() {
 }
 
 void reconnect() {
+  lcd.clear();
+  lcd.print("Waiting for MQTT...");
   // Loop until we're reconnected
+  
   while (!mqttClient.connected()) {
     Serial.println("Attempting MQTT connection...");
 
@@ -284,6 +302,7 @@ void reconnect() {
       mqttClient.subscribe(getTopic(PV_topic,'N'));
       mqttClient.subscribe(getTopic(Relay2_topic, 'N'));
       
+      lcd.clear();
 
     } else {
       Serial.print("failed, rc=");
@@ -298,12 +317,13 @@ void reconnect() {
 int i = 6000;
 
 void loop() {
+
+  if(WiFi.status() != WL_CONNECTED){
+    setupWifi();
+  }
+
   // put your main code here, to run repeatedly:
   if (!mqttClient.connected()) {
-    lcd.clear();
-    lcd.print("Lost connection");
-    lcd.setCursor(0,1);
-    lcd.print("to MQTT...");
     reconnect();
   }
 
