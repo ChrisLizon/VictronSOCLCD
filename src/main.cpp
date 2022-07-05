@@ -60,16 +60,28 @@ WiFiClientSecure wifiClient;
 PubSubClient mqttClient;
 
 //state information
-int lastSOC = 0;
-int lastACState = 0;
-int lastACIn = 0;
-int lastSolarYield = 0;
-int lastACOut = 0;
-int lastInverterMode = 0;
+int lastSOC = -1;
+int lastACState = -1;
+int lastACIn = -1;
+int lastSolarYield = -1;
+int lastACOut = -1;
+int lastInverterMode = 12;
 int lastRelay2state = 0;
 
 //inverter mode array. 
-const char *inverterMode[]= { "Off", "Low Power", "Fault", "Bulk", "Absorption","Float","Storage", "Equalize","Passthru","Inverting","Assisting","Power Supply" }; 
+const char *inverterMode[]= { "Off         ",
+                              "Low Power   ",
+                              "Fault       ",
+                              "Bulk        ",
+                              "Absorption  ",
+                              "Float       ",
+                              "Storage     ", 
+                              "Equalize    ",
+                              "Passthru    ",
+                              "Inverting   ",
+                              "Assisting   ",
+                              "Power Supply",
+                              "Connecting.." }; 
 
 
 
@@ -288,7 +300,11 @@ int i = 6000;
 void loop() {
   // put your main code here, to run repeatedly:
   if (!mqttClient.connected()) {
-     reconnect();
+    lcd.clear();
+    lcd.print("Lost connection");
+    lcd.setCursor(0,1);
+    lcd.print("to MQTT...");
+    reconnect();
   }
 
   //every so many loops we will request a new update from the MQTT brokers
